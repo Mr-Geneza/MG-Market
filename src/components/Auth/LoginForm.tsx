@@ -1,0 +1,196 @@
+import { useState } from "react";
+import { Eye, EyeOff, Phone, Mail, MessageCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { useReferralBind } from "@/hooks/useReferralBind";
+import { useReferralCapture } from "@/hooks/useReferralCapture";
+
+export function LoginForm() {
+  const [showPassword, setShowPassword] = useState(false);
+  const [loginType, setLoginType] = useState("email");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
+  
+  // Capture referral code from URL
+  useReferralCapture();
+  
+  // Auto-bind referral on login
+  useReferralBind();
+
+  // Show loader while checking auth state
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  // Redirect if already logged in
+  if (user) {
+    navigate('/dashboard');
+    return null;
+  }
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Успешный вход",
+        description: "Вы успешно вошли в систему",
+      });
+
+      navigate('/dashboard');
+    } catch (error: any) {
+      toast({
+        title: "Ошибка входа",
+        description: error.message || "Неверный email или пароль",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <div className="w-full max-w-md">
+        <Card className="shadow-[var(--shadow-elevated)]">
+          <CardHeader className="text-center space-y-2">
+            <div className="mx-auto w-12 h-12 rounded-xl hero-gradient flex items-center justify-center mb-4">
+              <span className="text-white font-bold text-lg">MLM</span>
+            </div>
+            <CardTitle className="text-2xl font-bold">Добро пожаловать</CardTitle>
+            <CardDescription>
+              Войдите в вашу учётную запись MLM Platform
+            </CardDescription>
+          </CardHeader>
+          
+          <CardContent>
+            <Tabs value={loginType} onValueChange={setLoginType} className="w-full">
+              <TabsList className="grid w-full grid-cols-3 mb-6">
+                <TabsTrigger value="phone" className="flex items-center space-x-1">
+                  <Phone className="h-3 w-3" />
+                  <span className="hidden sm:inline">Телефон</span>
+                </TabsTrigger>
+                <TabsTrigger value="email" className="flex items-center space-x-1">
+                  <Mail className="h-3 w-3" />
+                  <span className="hidden sm:inline">Email</span>
+                </TabsTrigger>
+                <TabsTrigger value="telegram" className="flex items-center space-x-1">
+                  <MessageCircle className="h-3 w-3" />
+                  <span className="hidden sm:inline">Telegram</span>
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="phone" className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Номер телефона</Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="+7 (___) ___-__-__"
+                    className="text-base"
+                  />
+                </div>
+              </TabsContent>
+
+              <TabsContent value="email" className="space-y-4">
+                <form onSubmit={handleLogin} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="example@domain.com"
+                      className="text-base"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Пароль</Label>
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Введите пароль"
+                        className="text-base pr-10"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                  <Button type="submit" className="w-full hero-gradient border-0" size="lg" disabled={loading}>
+                    {loading ? "Вход..." : "Войти"}
+                  </Button>
+                </form>
+              </TabsContent>
+
+              <TabsContent value="telegram" className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="telegram">Логин Telegram</Label>
+                  <Input
+                    id="telegram"
+                    type="text"
+                    placeholder="@username"
+                    className="text-base"
+                  />
+                </div>
+              </TabsContent>
+
+
+              <div className="text-center space-y-2">
+                <a href="/forgot-password">
+                  <Button variant="link" size="sm" className="text-muted-foreground">
+                    Забыли пароль?
+                  </Button>
+                </a>
+                <div className="text-sm text-muted-foreground">
+                  Нет аккаунта?{" "}
+                  <a href="/register" className="text-primary hover:underline font-medium">
+                    Зарегистрироваться
+                  </a>
+                </div>
+              </div>
+            </Tabs>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
