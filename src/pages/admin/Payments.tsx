@@ -530,7 +530,7 @@ export default function AdminPayments() {
                           <TableCell>
                             <div>
                               <div className="font-medium">
-                                {sub.profiles?.full_name || 'N/A'}
+                                {sub.profiles?.full_name || sub.user_id}
                               </div>
                               <div className="text-xs text-muted-foreground">
                                 {sub.profiles?.email}
@@ -704,7 +704,7 @@ export default function AdminPayments() {
                           <TableCell>
                             <div>
                               <div className="font-medium">
-                                {order.profiles?.full_name || 'N/A'}
+                                {order.profiles?.full_name || order.user_id}
                               </div>
                               <div className="text-xs text-muted-foreground">
                                 {order.profiles?.email}
