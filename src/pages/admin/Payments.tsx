@@ -101,6 +101,7 @@ export default function AdminPayments() {
       let query = supabase
         .from('subscriptions')
         .select('*')
+        .order('created_at', { ascending: false })
         .limit(1000);
 
       if (!showArchived) {
