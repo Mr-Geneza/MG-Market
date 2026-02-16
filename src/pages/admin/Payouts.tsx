@@ -295,7 +295,8 @@ export default function AdminPayouts() {
 
       const { data, error } = await supabase.rpc('admin_adjust_balance_2' as any, {
         p_user_id: adjustmentDialog.partner.id,
-        p_amount_kzt: amountKztSigned,
+        // RPC expects p_amount_cents (legacy name), but values are in whole KZT
+        p_amount_cents: amountKztSigned,
         p_reason: adjustmentForm.reason.trim(),
         p_admin_id: user.id
       });

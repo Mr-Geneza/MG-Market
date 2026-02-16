@@ -1648,7 +1648,7 @@ export type Database = {
       admin_adjust_balance_2: {
         Args: {
           p_admin_id: string
-          p_amount_kzt: number
+          p_amount_cents: number
           p_reason: string
           p_user_id: string
         }
