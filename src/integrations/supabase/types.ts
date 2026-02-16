@@ -1645,6 +1645,15 @@ export type Database = {
             }
             Returns: Json
           }
+      admin_adjust_balance_2: {
+        Args: {
+          p_admin_id: string
+          p_amount_kzt: number
+          p_reason: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       admin_audit_user_commissions: {
         Args: { p_admin_id: string; p_user_id: string }
         Returns: {
