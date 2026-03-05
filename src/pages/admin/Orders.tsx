@@ -30,7 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Eye, Archive, Trash2, ExternalLink } from "lucide-react";
+import { Eye, Archive, Trash2, ExternalLink, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useArchiveRecords, useHardDeleteRecords } from "@/hooks/useArchiveRecords";
@@ -79,6 +79,7 @@ export default function AdminOrders() {
   const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
   const [deleteDialog, setDeleteDialog] = useState(false);
   const [confirmationPhrase, setConfirmationPhrase] = useState('');
+  const [fullNameQuery, setFullNameQuery] = useState('');
 
   const archiveRecords = useArchiveRecords();
   const hardDeleteRecords = useHardDeleteRecords();
@@ -334,6 +335,12 @@ export default function AdminOrders() {
   if (filterStatus !== "all") {
     filteredOrders = orders.filter((o) => o.status === filterStatus);
   }
+  const normalizedNameQuery = fullNameQuery.trim().toLowerCase();
+  if (normalizedNameQuery) {
+    filteredOrders = filteredOrders.filter((order) =>
+      (order.profiles?.full_name || "").toLowerCase().includes(normalizedNameQuery)
+    );
+  }
 
   if (loading) {
     return <div className="p-8">Загрузка...</div>;
@@ -394,6 +401,17 @@ export default function AdminOrders() {
           )}
         </CardHeader>
         <CardContent>
+          <div className="mb-4 flex flex-wrap items-center gap-3">
+            <div className="relative w-full sm:max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Поиск по фамилии..."
+                value={fullNameQuery}
+                onChange={(e) => setFullNameQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </div>
           <Table>
             <TableHeader>
               <TableRow>
