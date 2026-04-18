@@ -11,6 +11,12 @@ interface AuthContextType {
   signOut: () => Promise<void>;
 }
 
+const ROLE_PRIORITY: Record<'user' | 'admin' | 'superadmin', number> = {
+  user: 0,
+  admin: 1,
+  superadmin: 2,
+};
+
 const AuthContext = createContext<AuthContextType>({
   user: null,
   session: null,
@@ -68,15 +74,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .from('user_roles')
         .select('role')
         .eq('user_id', userId)
-        .order('role', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        ;
 
       if (error) {
         console.error('Error fetching user role:', error);
         setUserRole('user');
       } else {
-        setUserRole(data?.role || 'user');
+        const resolvedRole = (data || []).reduce<'user' | 'admin' | 'superadmin'>((highestRole, row) => {
+          return ROLE_PRIORITY[row.role] > ROLE_PRIORITY[highestRole] ? row.role : highestRole;
+        }, 'user');
+
+        if ((data?.length || 0) > 1) {
+          console.warn('Multiple roles found for user, using highest priority role:', userId, data);
+        }
+
+        setUserRole(resolvedRole);
       }
     } catch (err) {
       console.error('Error in fetchUserRole:', err);
