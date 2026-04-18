@@ -73,7 +73,7 @@ export default function ProductDetail() {
 
       if (productError) throw productError;
       if (!productData) {
-        navigate('/404');
+        navigate('/404', { replace: true });
         return;
       }
 
@@ -95,7 +95,7 @@ export default function ProductDetail() {
       }
     } catch (error) {
       console.error('Error fetching product:', error);
-      navigate('/404');
+      navigate('/404', { replace: true });
     } finally {
       setLoading(false);
     }

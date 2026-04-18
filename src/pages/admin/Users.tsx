@@ -111,10 +111,7 @@ export default function AdminUsers() {
     try {
       let query = supabase
         .from('profiles')
-        .select(`
-          *,
-          sponsor:sponsor_id(full_name, email, is_active, deleted_at, is_archived)
-        `);
+        .select('*');
 
       if (!showArchived) {
         query = query.or('is_archived.is.null,is_archived.eq.false');
@@ -140,6 +137,30 @@ export default function AdminUsers() {
       const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) throw error;
+
+      const sponsorIds = [...new Set((data || []).map(profile => profile.sponsor_id).filter(Boolean))];
+      const sponsorMap = new Map<string, NonNullable<Profile['sponsor']>>();
+
+      if (sponsorIds.length > 0) {
+        const { data: sponsors, error: sponsorsError } = await supabase
+          .from('profiles')
+          .select('id, full_name, email, is_active, deleted_at, is_archived')
+          .in('id', sponsorIds);
+
+        if (sponsorsError) {
+          console.error('Error fetching sponsors:', sponsorsError);
+        } else {
+          (sponsors || []).forEach((sponsor) => {
+            sponsorMap.set(sponsor.id, {
+              full_name: sponsor.full_name,
+              email: sponsor.email,
+              is_active: sponsor.is_active,
+              deleted_at: sponsor.deleted_at,
+              is_archived: sponsor.is_archived,
+            });
+          });
+        }
+      }
       
       const { data: balancesData } = await supabase.rpc('get_all_user_balances');
       const balancesMap = new Map<string, number>();
@@ -152,6 +173,7 @@ export default function AdminUsers() {
       
       const profilesWithBalances = (data || []).map(profile => ({
         ...profile,
+        sponsor: profile.sponsor_id ? sponsorMap.get(profile.sponsor_id) ?? null : null,
         realBalance: balancesMap.get(profile.id) ?? 0
       }));
       

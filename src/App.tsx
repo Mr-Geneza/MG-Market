@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AppLayout } from "@/components/Layout/AppLayout";
 import { AuthProvider } from "@/hooks/useAuth";
 import { LoaderProvider, useLoader } from "@/contexts/LoaderContext";
@@ -75,6 +75,11 @@ function AppContent() {
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/signin" element={<Navigate to="/login" replace />} />
+        <Route path="/signup" element={<Navigate to="/register" replace />} />
+        <Route path="/auth" element={<Navigate to="/login" replace />} />
+        <Route path="/admin" element={<Navigate to="/admin/users" replace />} />
+        <Route path="/404" element={<NotFound />} />
         <Route path="/docs" element={<Docs />} />
         <Route path="/docs/:slug" element={<DocView />} />
         <Route path="/product/:slug" element={<ProductDetail />} />
