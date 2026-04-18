@@ -25,14 +25,15 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { getProductPriceInputValue } from "@/lib/productPricing";
 
 type Product = {
   id: string;
   title: string;
   slug: string;
   description: string | null;
-  price_usd: number;
-  price_kzt: number;
+  price_usd: number | null;
+  price_kzt: number | null;
   is_activation: boolean;
   is_popular: boolean;
   is_new: boolean;
@@ -84,7 +85,12 @@ export default function AdminProducts() {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setProducts(data || []);
+      const normalizedProducts = (data || []).map((product) => ({
+        ...product,
+        price_usd: typeof product.price_usd === "number" ? product.price_usd : null,
+        price_kzt: typeof product.price_kzt === "number" ? product.price_kzt : 0,
+      }));
+      setProducts(normalizedProducts);
     } catch (error) {
       console.error("Error fetching products:", error);
       toast({
@@ -104,8 +110,8 @@ export default function AdminProducts() {
         title: product.title,
         slug: product.slug,
         description: product.description || "",
-        price_usd: product.price_usd.toString(),
-        price_kzt: product.price_kzt.toString(),
+        price_usd: getProductPriceInputValue(product.price_usd),
+        price_kzt: getProductPriceInputValue(product.price_kzt),
         is_activation: product.is_activation,
         is_popular: product.is_popular,
         is_new: product.is_new,
@@ -672,6 +678,10 @@ export default function AdminProducts() {
           <CardTitle>Каталог товаров</CardTitle>
         </CardHeader>
         <CardContent>
+          {products.length === 0 && (
+            <div className="py-8 text-center text-muted-foreground">Товары не найдены</div>
+          )}
+          {products.length > 0 && (
           <Table>
             <TableHeader>
               <TableRow>
@@ -729,6 +739,7 @@ export default function AdminProducts() {
               ))}
             </TableBody>
           </Table>
+          )}
         </CardContent>
       </Card>
     </div>
