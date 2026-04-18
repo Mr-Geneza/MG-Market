@@ -17,6 +17,14 @@ const ROLE_PRIORITY: Record<'user' | 'admin' | 'superadmin', number> = {
   superadmin: 2,
 };
 
+const resolveHighestRole = (
+  rows: Array<{ role: 'user' | 'admin' | 'superadmin' }> = []
+): 'user' | 'admin' | 'superadmin' => {
+  return rows.reduce<'user' | 'admin' | 'superadmin'>((highestRole, row) => {
+    return ROLE_PRIORITY[row.role] > ROLE_PRIORITY[highestRole] ? row.role : highestRole;
+  }, 'user');
+};
+
 const AuthContext = createContext<AuthContextType>({
   user: null,
   session: null,
@@ -73,22 +81,44 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const { data, error } = await supabase
         .from('user_roles')
         .select('role')
-        .eq('user_id', userId)
-        ;
+        .eq('user_id', userId);
 
       if (error) {
         console.error('Error fetching user role:', error);
-        setUserRole('user');
       } else {
-        const resolvedRole = (data || []).reduce<'user' | 'admin' | 'superadmin'>((highestRole, row) => {
-          return ROLE_PRIORITY[row.role] > ROLE_PRIORITY[highestRole] ? row.role : highestRole;
-        }, 'user');
+        const resolvedRole = resolveHighestRole(data || []);
 
         if ((data?.length || 0) > 1) {
           console.warn('Multiple roles found for user, using highest priority role:', userId, data);
         }
 
-        setUserRole(resolvedRole);
+        if (resolvedRole !== 'user') {
+          setUserRole(resolvedRole);
+          return;
+        }
+      }
+
+      // Fallback to RPC role checks. This helps when direct reads from user_roles
+      // are restricted by RLS but the role-check function is still available.
+      const [{ data: isSuperAdmin, error: superAdminError }, { data: isAdmin, error: adminError }] = await Promise.all([
+        supabase.rpc('has_role', { _role: 'superadmin', _user_id: userId }),
+        supabase.rpc('has_role', { _role: 'admin', _user_id: userId }),
+      ]);
+
+      if (superAdminError) {
+        console.error('Error checking superadmin role via RPC:', superAdminError);
+      }
+
+      if (adminError) {
+        console.error('Error checking admin role via RPC:', adminError);
+      }
+
+      if (isSuperAdmin) {
+        setUserRole('superadmin');
+      } else if (isAdmin) {
+        setUserRole('admin');
+      } else {
+        setUserRole('user');
       }
     } catch (err) {
       console.error('Error in fetchUserRole:', err);
