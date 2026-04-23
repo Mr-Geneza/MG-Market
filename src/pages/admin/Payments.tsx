@@ -35,6 +35,32 @@ type Order = {
   };
 };
 
+const PROFILE_BATCH_SIZE = 200;
+
+async function fetchProfilesMap(userIds: string[]) {
+  const uniqueUserIds = [...new Set(userIds.filter(Boolean))];
+  const profilesMap = new Map<string, { full_name: string; email: string }>();
+
+  for (let i = 0; i < uniqueUserIds.length; i += PROFILE_BATCH_SIZE) {
+    const batch = uniqueUserIds.slice(i, i + PROFILE_BATCH_SIZE);
+    const { data: profiles, error } = await supabase
+      .from('profiles')
+      .select('id, full_name, email')
+      .in('id', batch);
+
+    if (error) throw error;
+
+    profiles?.forEach((profile) => {
+      profilesMap.set(profile.id, {
+        full_name: profile.full_name || '',
+        email: profile.email || ''
+      });
+    });
+  }
+
+  return profilesMap;
+}
+
 export default function AdminPayments() {
   const { userRole } = useAuth();
   const isSuperAdmin = userRole === 'superadmin';
@@ -101,8 +127,7 @@ export default function AdminPayments() {
       let query = supabase
         .from('subscriptions')
         .select('*')
-        .order('created_at', { ascending: false })
-        .limit(1000);
+        .order('created_at', { ascending: false });
 
       if (!showArchived) {
         query = query.or('is_archived.is.null,is_archived.eq.false');
@@ -128,19 +153,8 @@ export default function AdminPayments() {
       if (error) throw error;
       
       // Fetch all profiles in one query
-      const allUserIds = [...new Set((data || []).map(sub => sub.user_id).filter(Boolean))];
-      const profilesMap = new Map<string, { full_name: string; email: string }>();
-      
-      if (allUserIds.length > 0) {
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('id, full_name, email')
-          .in('id', allUserIds);
-        
-        profiles?.forEach(p => {
-          profilesMap.set(p.id, { full_name: p.full_name || '', email: p.email || '' });
-        });
-      }
+      const allUserIds = (data || []).map(sub => sub.user_id);
+      const profilesMap = await fetchProfilesMap(allUserIds);
       
       // Map profiles to subscriptions
       const subscriptionsWithProfiles = (data || []).map(sub => ({
@@ -191,7 +205,7 @@ export default function AdminPayments() {
       let query = supabase
         .from('orders')
         .select('*')
-        .limit(1000);
+        .order('created_at', { ascending: false });
 
       if (!showArchived) {
         query = query.or('is_archived.is.null,is_archived.eq.false');
@@ -217,19 +231,8 @@ export default function AdminPayments() {
       if (error) throw error;
       
       // Fetch all profiles in one query
-      const allOrderUserIds = [...new Set((data || []).map(order => order.user_id).filter(Boolean))];
-      const profilesMap = new Map<string, { full_name: string; email: string }>();
-      
-      if (allOrderUserIds.length > 0) {
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('id, full_name, email')
-          .in('id', allOrderUserIds);
-        
-        profiles?.forEach(p => {
-          profilesMap.set(p.id, { full_name: p.full_name || '', email: p.email || '' });
-        });
-      }
+      const allOrderUserIds = (data || []).map(order => order.user_id);
+      const profilesMap = await fetchProfilesMap(allOrderUserIds);
       
       // Map profiles to orders
       const ordersWithProfiles = (data || []).map(order => ({
