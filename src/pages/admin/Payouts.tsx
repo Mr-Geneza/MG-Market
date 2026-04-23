@@ -14,6 +14,12 @@ import { formatKZT } from "@/utils/formatMoney";
 import { WithdrawalsHistory } from "@/components/Finances/WithdrawalsHistory";
 import { PartnersTable, Partner, BalanceFilter } from "@/components/Admin/PartnersTable";
 
+const getTodayDateValue = () => {
+  const now = new Date();
+  const offsetMs = now.getTimezoneOffset() * 60_000;
+  return new Date(now.getTime() - offsetMs).toISOString().slice(0, 10);
+};
+
 export default function AdminPayouts() {
   const { user, userRole } = useAuth();
   const isSuperAdmin = userRole === 'superadmin';
@@ -50,6 +56,7 @@ export default function AdminPayouts() {
   const [adjustmentForm, setAdjustmentForm] = useState({
     amount: "",
     direction: "credit" as "credit" | "debit",
+    requestDate: getTodayDateValue(),
     reason: "",
   });
 
@@ -185,13 +192,14 @@ export default function AdminPayouts() {
     setAdjustmentForm({ 
       amount: "", 
       direction: partner.available_kzt < 0 ? "credit" : "debit",
+      requestDate: getTodayDateValue(),
       reason: partner.available_kzt < 0 ? "Коррекция отрицательного баланса" : ""
     });
   };
 
   const closeAdjustmentDialog = () => {
     setAdjustmentDialog({ open: false, partner: null });
-    setAdjustmentForm({ amount: "", direction: "credit", reason: "" });
+    setAdjustmentForm({ amount: "", direction: "credit", requestDate: getTodayDateValue(), reason: "" });
   };
 
   const handlePayout = async () => {
@@ -285,6 +293,15 @@ export default function AdminPayouts() {
       return;
     }
 
+    if (!adjustmentForm.requestDate) {
+      toast({
+        title: "Ошибка",
+        description: "Выберите дату заявки",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setProcessing(true);
 
     try {
@@ -297,6 +314,7 @@ export default function AdminPayouts() {
         p_user_id: adjustmentDialog.partner.id,
         // RPC expects p_amount_cents (legacy name), but values are in whole KZT
         p_amount_cents: amountKztSigned,
+        p_request_date: adjustmentForm.requestDate,
         p_reason: adjustmentForm.reason.trim(),
         p_admin_id: user.id
       });
@@ -534,6 +552,16 @@ export default function AdminPayouts() {
                     )}
                   </p>
                 )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="adj-request-date">Дата заявки *</Label>
+                <Input
+                  id="adj-request-date"
+                  type="date"
+                  value={adjustmentForm.requestDate}
+                  onChange={(e) => setAdjustmentForm(prev => ({ ...prev, requestDate: e.target.value }))}
+                />
               </div>
 
               <div className="space-y-2">
