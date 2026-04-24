@@ -2338,7 +2338,12 @@ export type Database = {
         Returns: undefined
       }
       process_manual_payout: {
-        Args: { p_amount_cents: number; p_comment: string; p_user_id: string }
+        Args: {
+          p_amount_cents: number
+          p_comment: string
+          p_request_date?: string
+          p_user_id: string
+        }
         Returns: Json
       }
       process_payment_completion: {

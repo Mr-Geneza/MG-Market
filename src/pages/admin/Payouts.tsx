@@ -41,6 +41,7 @@ export default function AdminPayouts() {
   });
   const [payoutForm, setPayoutForm] = useState({
     amount_kzt: "",
+    requestDate: getTodayDateValue(),
     comment: "",
   });
   const [processing, setProcessing] = useState(false);
@@ -179,12 +180,12 @@ export default function AdminPayouts() {
 
   const openPayoutDialog = (partner: Partner) => {
     setPayoutDialog({ open: true, partner });
-    setPayoutForm({ amount_kzt: "", comment: "" });
+    setPayoutForm({ amount_kzt: "", requestDate: getTodayDateValue(), comment: "" });
   };
 
   const closePayoutDialog = () => {
     setPayoutDialog({ open: false, partner: null });
-    setPayoutForm({ amount_kzt: "", comment: "" });
+    setPayoutForm({ amount_kzt: "", requestDate: getTodayDateValue(), comment: "" });
   };
 
   const openAdjustmentDialog = (partner: Partner) => {
@@ -234,13 +235,23 @@ export default function AdminPayouts() {
       return;
     }
 
+    if (!payoutForm.requestDate) {
+      toast({
+        title: "Ошибка",
+        description: "Выберите дату выплаты",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setProcessing(true);
 
     try {
       const { data, error } = await supabase.rpc('process_manual_payout', {
         p_user_id: payoutDialog.partner.id,
         p_amount_cents: amountKzt, // В тенге (KZT), параметр RPC ещё называется _cents
-        p_comment: payoutForm.comment.trim()
+        p_comment: payoutForm.comment.trim(),
+        p_request_date: payoutForm.requestDate
       });
 
       if (error) throw error;
@@ -461,6 +472,16 @@ export default function AdminPayouts() {
                     = {formatKZT(parseInt(payoutForm.amount_kzt), 'KZT')}
                   </p>
                 )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="payout-request-date">Дата выплаты</Label>
+                <Input
+                  id="payout-request-date"
+                  type="date"
+                  value={payoutForm.requestDate}
+                  onChange={(e) => setPayoutForm(prev => ({ ...prev, requestDate: e.target.value }))}
+                />
               </div>
 
               <div className="space-y-2">
