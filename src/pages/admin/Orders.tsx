@@ -172,20 +172,46 @@ export default function AdminOrders() {
 
   const fetchOrderItems = async (orderId: string) => {
     try {
+      setOrderItems([]);
+
       const { data, error } = await supabase
         .from("order_items")
-        .select(`
-          *,
-          products (
-            title
-          )
-        `)
+        .select("id, product_id, qty, price_usd, price_kzt, is_activation_snapshot")
         .eq("order_id", orderId);
 
       if (error) throw error;
-      setOrderItems(data || []);
+
+      const productIds = [...new Set((data || []).map((item) => item.product_id).filter(Boolean))];
+      const productsMap = new Map<string, { title: string }>();
+
+      if (productIds.length > 0) {
+        const { data: productsData, error: productsError } = await supabase
+          .from("products")
+          .select("id, title")
+          .in("id", productIds);
+
+        if (productsError) {
+          console.error("Error fetching products for order items:", productsError);
+        } else {
+          productsData?.forEach((product) => {
+            productsMap.set(product.id, { title: product.title });
+          });
+        }
+      }
+
+      const orderItemsWithProducts: OrderItem[] = (data || []).map((item) => ({
+        ...item,
+        products: item.product_id ? productsMap.get(item.product_id) : undefined
+      }));
+
+      setOrderItems(orderItemsWithProducts);
     } catch (error) {
       console.error("Error fetching order items:", error);
+      toast({
+        title: "Ошибка загрузки состава заказа",
+        description: "Не удалось получить позиции заказа",
+        variant: "destructive",
+      });
     }
   };
 
@@ -584,6 +610,11 @@ export default function AdminOrders() {
                     ))}
                   </TableBody>
                 </Table>
+                {orderItems.length === 0 && (
+                  <p className="mt-3 text-sm text-muted-foreground">
+                    Позиции заказа не найдены
+                  </p>
+                )}
               </div>
 
               <div className="border-t pt-4">
